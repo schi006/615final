@@ -11,7 +11,7 @@ NumericMatrix cbindC(NumericMatrix mf, NumericMatrix Y) {
     if (j < 2) {
       out(_, j) = Y(_, 1-j);
     } else {
-      out(_, j) = b(_, j - acoln);
+      out(_, j) = b(_, j - 2);
     }
   }
   return out;

@@ -1,19 +1,18 @@
 ####################################################################################################
-func1 <- 'NumericMatrix mmult1(NumericMatrix a, NumericMatrix b) {
-  int acoln = a.ncol();
-  int bcoln = b.ncol();
-  NumericMatrix out = no_init_matrix(a.nrow(), acoln + bcoln);
-  for (int j = 0; j < acoln + bcoln; j++) {
-    if (j < acoln) {
-      out(_, j) = a(_, j);
+cbindCpp <- 'NumericMatrix cbindC(NumericMatrix mf, NumericMatrix Y) {
+  int acoln = mf.ncol();
+  NumericMatrix out = no_init_matrix(Y.nrow(), acoln + 2);
+  for (int j = 0; j < acoln + 2; j++) {
+    if (j < 2) {
+      out(_, j) = Y(_, 1-j);
     } else {
-      out(_, j) = b(_, j - acoln);
+      out(_, j) = mf(_, j - 2);
     }
   }
   return out;
 }'
 
-cppFunction(func1)
+cppFunction(cbindCpp)
 ####################################################################################################
 coxphSGDprepare <- function(formula, data) {
   # Parameter identification as in  `survival::coxph()`.

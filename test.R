@@ -45,3 +45,8 @@ cppFunction('int add(int x, int y, int z){
            return sum;
            }')
 
+set.seed(42)
+a <- matrix(rnorm(50), 25)
+b <- matrix(runif(100), 25)
+cbind(a,b)
+cbindC(b,a)
