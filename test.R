@@ -1,4 +1,4 @@
-setwd("C:/1.1/bios615/project")
+setwd("C:/Users/10636/Documents/GitHub/615final")
 a=c(3,2)
 b=c(5,1)
 coxphSGDprepare <- function(formula, data) {
@@ -6,20 +6,20 @@ coxphSGDprepare <- function(formula, data) {
   Call <- match.call()
   indx <- match(c("formula", "data"),
                 names(Call), nomatch = 0)
-  print(Call)
-  print('\n')
-  print('\n')
-  print(indx)
   temp <- Call[c(1, indx)]
   temp[[1]] <- as.name("model.frame")
   
   mf <- eval(temp, parent.frame())
   #print(mf)
+  mfm<-as.matrix(mf[,-1])
+  print(is.matrix(mf))
   Y <- model.extract(mf, "response")
-  print(Y)
-  print(unclass(Y))
+  print(is.matrix(Y))
+  #print(Y)
+  #print(unclass(Y))
 }
-coxphSGDprepare(data=2,fomula=a~b,data=1,data=8)
+coxphSGDprepare(formula     = Surv(time, status) ~ x.1+x.2,
+                data        = dCox)
 
 
 library(Rcpp)
@@ -46,7 +46,35 @@ cppFunction('int add(int x, int y, int z){
            }')
 
 set.seed(42)
-a <- matrix(rnorm(50), 25)
-b <- matrix(runif(100), 25)
-cbind(a,b)
-cbindC(b,a)
+a <- matrix(rnorm(2186), 1093)
+b <- matrix(runif(66673), 1093)
+#cbind(a,b)
+#cbindC(b,a)
+library(microbenchmark)
+microbenchmark(cbind(a,b),cbindC(a,b))
+
+sourceCpp("orderC.cpp")
+r<-runif(1093)
+microbenchmark(orderC(r),order(r))
+
+coxphSGDbatch(formula     = Surv(time, status) ~ x.1+x.2,
+                     data        = dCox,
+                     learning.rate = function(x){1/(100*sqrt(x))},
+                     beta   = c(0,0))
+
+
+a <- matrix(rnorm(1093), 1093)
+b <- matrix(runif(1093), 1)+10
+c<-matMultC(a,b)
+d<-
+microbenchmark(apply(b, 1,function(element) exp(element %*% a) ),matMultC(b,a),b%*%a)
+identical(apply(b, 1,function(element) exp(element %*% a) ),matMultC(b,a))
+
+M1 <- matrix(sample(1e3),ncol=50)
+M2 <- matrix(sample(1e3),nrow=50)
+
+identical(matMultC(M1,M2), M1 %*% M2)
+microbenchmark(
+  +   matMultC(M1,M2),
+  +   M1 %*% M2,
+  +   times=10000L)

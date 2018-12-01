@@ -2,23 +2,10 @@
 using namespace Rcpp;
 void quickSort(NumericVector A, NumericVector B, int pl, int r);
 NumericVector orderC(NumericVector A);
-NumericMatrix cbindC(NumericMatrix mf, NumericMatrix Y);
 //[[Rcpp::export]]
-NumericMatrix cbindC(NumericMatrix mf, NumericMatrix Y) {
-  int acoln = mf.ncol();
-  NumericMatrix out = no_init_matrix(a.nrow(), acoln + 2);
-  for (int j = 0; j < acoln + 2; j++) {
-    if (j < 2) {
-      out(_, j) = Y(_, 1-j);
-    } else {
-      out(_, j) = b(_, j - acoln);
-    }
-  }
-  return out;
-}
 NumericVector orderC(NumericVector A){
  int n=A.length();
- NumericVector B(n);
+ NumericVector B(n);//B is the index
  for(int i=0;i<n;i++) B[i]=i+1;
  quickSort(A,B,0,n-1); 
  return B;

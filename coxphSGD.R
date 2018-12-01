@@ -1,4 +1,5 @@
 ####################################################################################################
+#cbind
 cbindCpp <- 'NumericMatrix cbindC(NumericMatrix mf, NumericMatrix Y) {
   int acoln = mf.ncol();
   NumericMatrix out = no_init_matrix(Y.nrow(), acoln + 2);
@@ -11,8 +12,21 @@ cbindCpp <- 'NumericMatrix cbindC(NumericMatrix mf, NumericMatrix Y) {
   }
   return out;
 }'
-
 cppFunction(cbindCpp)
+#matrix multiplication
+#install.packages("inline")
+#library("inline")
+matMultC<-cxxfunction(signature(a="NumericMatrix",
+                                b="NumericMatrix"),
+                         plugin="RcppEigen",
+                         body="
+NumericMatrix aa(a);
+NumericMatrix bb(b);
+const Eigen::Map<Eigen::MatrixXd> am(as<Eigen::Map<Eigen::MatrixXd> >(aa));
+const Eigen::Map<Eigen::MatrixXd> bm(as<Eigen::Map<Eigen::MatrixXd> >(bb));
+Eigen::MatrixXd c=am*bm;
+return(wrap(c));
+")
 ####################################################################################################
 coxphSGDprepare <- function(formula, data) {
   # Parameter identification as in  `survival::coxph()`.
@@ -37,11 +51,8 @@ coxphSGDprepare <- function(formula, data) {
   
   # collect times, status, variables and reorder samples
   # to make the algorithm more clear to read and track
-  cbind(event = unclass(Y)[,2], # 1 indicates event, 0 indicates cens
-        times = unclass(Y)[,1],                         #它的数据里Y有两列，时间和状态
-        mf[, -1]) -> data2return                        #mf的第一列应该是名称之类，之后是数据
-
-  data2return[order(data2return$times), ] # dplyr::arrange(times) #所有数据按照times排序#这句好像没有用，可以删
+  cbindC(as.matrix(mf[,-1]),Y) -> data2return                        #mf的第一列应该是Y，之后是X
+  #colnames(data2return)[1:2]<-c("event","times")
 }
 
 coxphSGDbatch <- function(formula, data, learning.rate, beta){
@@ -52,7 +63,7 @@ coxphSGDbatch <- function(formula, data, learning.rate, beta){
   # calculate the log-likelihood for this batch sample
 
 ########################################################################################  
-  batchData <- batchData[order(-batchData$times), ] # dplyr::arrange(-times) / sorts time again but with different order
+  batchData <- batchData[order(-batchData[,2]), ] # dplyr::arrange(-times) / sorts time again but with different order
 
   # scores occure in nominator and denominator
   scores <- apply(batchData[, -c(1, 2)], 1,
@@ -61,7 +72,7 @@ coxphSGDbatch <- function(formula, data, learning.rate, beta){
                      function(element) cumsum(scores*element) )
   denominator <- cumsum(scores)
   # sum over non-censored observations
-  partial_sum <- (batchData[, -c(1, 2)] - nominator/denominator)*batchData[, "event"]
+  partial_sum <- (batchData[, -c(1, 2)] - nominator/denominator)*batchData[,1]
   # each column indicates one explanatory variable
   U_batch <- colSums(partial_sum)
   return(beta + learning.rate * U_batch)
