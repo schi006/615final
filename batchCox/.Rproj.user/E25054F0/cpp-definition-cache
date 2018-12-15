@@ -1,0 +1,44 @@
+[
+    {
+        "definitions" : [
+            {
+                "column" : 15,
+                "file" : "C:/Users/10636/Documents/batchCox/src/batchCox.cpp",
+                "kind" : 6,
+                "line" : 10,
+                "name" : "cbindC(NumericMatrix, NumericMatrix)",
+                "parent_name" : "",
+                "usr" : "c:@F@cbindC#$@N@Rcpp@C@Matrix>#VI14#@N@Rcpp@CT>1#T@PreserveStorage#S0_#"
+            },
+            {
+                "column" : 15,
+                "file" : "C:/Users/10636/Documents/batchCox/src/batchCox.cpp",
+                "kind" : 6,
+                "line" : 23,
+                "name" : "matMultC(NumericMatrix, NumericVector)",
+                "parent_name" : "",
+                "usr" : "c:@F@matMultC#$@N@Rcpp@C@Matrix>#VI14#@N@Rcpp@CT>1#T@PreserveStorage#$@N@Rcpp@C@Vector>#VI14#@N@Rcpp@CT>1#T@PreserveStorage#"
+            },
+            {
+                "column" : 15,
+                "file" : "C:/Users/10636/Documents/batchCox/src/batchCox.cpp",
+                "kind" : 6,
+                "line" : 29,
+                "name" : "elementE(NumericVector)",
+                "parent_name" : "",
+                "usr" : "c:@F@elementE#$@N@Rcpp@C@Vector>#VI14#@N@Rcpp@CT>1#T@PreserveStorage#"
+            },
+            {
+                "column" : 15,
+                "file" : "C:/Users/10636/Documents/batchCox/src/batchCox.cpp",
+                "kind" : 6,
+                "line" : 37,
+                "name" : "nominatorC(NumericMatrix, NumericVector)",
+                "parent_name" : "",
+                "usr" : "c:@F@nominatorC#$@N@Rcpp@C@Matrix>#VI14#@N@Rcpp@CT>1#T@PreserveStorage#$@N@Rcpp@C@Vector>#VI14#@N@Rcpp@CT>1#T@PreserveStorage#"
+            }
+        ],
+        "file" : "C:/Users/10636/Documents/batchCox/src/batchCox.cpp",
+        "file_last_write" : 1544834871
+    }
+]

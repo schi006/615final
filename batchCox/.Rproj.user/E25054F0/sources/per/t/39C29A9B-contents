@@ -1,0 +1,203 @@
+require(survival)
+set.seed(456)
+x <- matrix(sample(0:1, size = 200000, replace = TRUE), ncol = 2)
+head(x)
+dCox <- CoxData(10^5, lambda = 3, rho = 2, x,
+                beta = c(2,2), cens.rate = 5)
+batch_id <- sample(1:90, size = 10^5, replace = TRUE)
+dCox_split <- split(dCox, batch_id)
+results <-
+  SGDCOX(formula     = Surv(time, status) ~ x.1+x.2,
+         data        = dCox_split,
+         epsilon     = 1e-5,
+         rate = function(x){1/(100*sqrt(x))},
+         initial   = c(0,0),
+         maxit    = 10*90)
+results$coefficients
+resultso <-
+    coxphSGD(formula     = Surv(time, status) ~ x.1+x.2,
+              data        = dCox_split,
+              epsilon     = 1e-5,
+              learn.rates = function(x){1/(100*sqrt(x))},
+              beta.zero   = c(0,0),
+              max.iter    = 10*90)
+formula     = Surv(time, status) ~ x.1+x.2
+i <- 1
+beta_new <- list()     # steps are saved in a list so that they can
+beta_old <- c(0,0) # be traced in the future
+# estimate
+for(i in 1:8) {
+  beta_new[[i]] <-
+      SGDCOXbatch(
+        formula = formula,
+        beta = beta_old,
+        learning.rate = 1/(100*sqrt(i)),
+        #data = data[[ceiling(runif(1,0,n))]] #随机的部分在准备过程中；两个缺点：1.输入数据必须一起；2.data的prepare重复多次
+        data = dCox_split[[ifelse(i%%n==0, n, i%%n)]]
+      )
+
+
+  beta_old <- beta_new[[i]]
+  i <- i + 1
+}
+
+resultso <-
+  coxphSGD(formula     = Surv(time, status) ~ x.1+x.2,
+           data        = dCox_split,
+           epsilon     = 1e-5,
+           learn.rates=function(x){1/(100*sqrt(x))},
+           beta.zero =c(0,0),
+           max.iter=10*90)
+resultso$coefficients[[7]]
+i <- 1
+beta_new <- list()     # steps are saved in a list so that they can
+beta_old <- beta_start # be traced in the future
+# estimate
+i <- 1
+beta_new <- list()     # steps are saved in a list so that they can
+beta_old <- c(0,0)
+for(i in 1:8) {
+  beta_new[[i]] <-
+    unlist(
+      coxphSGDbatch(
+        formula = formula,
+        beta = beta_old,
+        learning.rate = learn.rates(i),
+        data = dCox_split[[ifelse(i%%n==0, n, i%%n)]]
+      )
+    )
+
+  diff <- sqrt(sum((beta_new[[i]] - beta_old)^2))
+  beta_old <- beta_new[[i]]
+  i <- i + 1
+}
+
+batchData <- SGDCOXprepare(formula = formula, data = dCox_split[[1]])
+beta=c(0,0)
+batchData <- batchData[order(-batchData[,2]), ] # dplyr::arrange(-times) / sorts time again but with different order
+
+# scores occure in nominator and denominator
+scores <- elementE(matMultC(batchData[, -c(1, 2)], beta) )
+nominator <- nominatorC(batchData[, -c(1, 2)],scores)
+denominator <- cumsum(scores)
+# sum over non-censored observations
+partial_sum <- (batchData[, -c(1, 2)] - nominator/denominator)*batchData[,1]
+# each column indicates one explanatory variable
+U_batch <- colSums(partial_sum)
+return(beta + learning.rate * U_batch)
+
+# calculate the log-likelihood for this batch sample
+batchData <- batchData[order(-batchData$times), ] # dplyr::arrange(-times) / sorts time again but with different order
+# scores occure in nominator and denominator
+scores <- apply(batchData[, -c(1, 2)], 1,
+                function(element) exp(element %*% beta) )
+nominator <- apply(batchData[, -c(1, 2)], 2,
+                   function(element) cumsum(scores*element) )
+denominator <- cumsum(scores)
+# sum over non-censored observations
+partial_sum <- (batchData[, -c(1, 2)] - nominator/denominator)*batchData[, "event"]
+# each column indicates one explanatory variable
+U_batch <- colSums(partial_sum)
+identical(nominatorC(batchData[, -c(1, 2)],scores),apply(batchData[, -c(1, 2)], 2,
+                                                         function(element) cumsum(scores*element) ))
+require(microbenchmark)
+microbenchmark(nominatorC(batchData[, -c(1, 2)],scores),apply(batchData[, -c(1, 2)], 2,
+                                                              function(element) cumsum(scores*element) ))
+microbenchmark(SGDCOX(formula     = Surv(time, status) ~ x.1+x.2,
+                      data        = dCox_split,
+                      epsilon     = 1e-5,
+                      rate = function(x){1/(100*sqrt(x))},
+                      initial   = c(0,0),
+                      maxit    = 10*90),
+
+                 coxphSGD(formula     = Surv(time, status) ~ x.1+x.2,
+                          data        = dCox_split,
+                          epsilon     = 1e-5,
+                          learn.rates = function(x){1/(100*sqrt(x))},
+                          beta.zero   = c(0,0),
+                          max.iter    = 10*90))
+###################################################################################################
+#glmnet
+require(survival)
+dataCox <- function(n, lambda, rho, x, beta, cens.rate){
+
+  # real Weibull times
+  u <- runif(n)
+  Treal <- (- log(u) / (lambda * exp(x %*% beta)))^(1 / rho)
+
+  # censoring times
+  Censoring <- rexp(n, cens.rate)
+
+  # follow-up times and event indicators
+  time <- pmin(Treal, Censoring)
+  status <- as.numeric(Treal <= Censoring)
+
+  # data set
+  data.frame(id = 1:n, time = time, status = status, x = x)
+}
+set.seed(456)
+x <- matrix(sample(0:1, size = 20000, replace = TRUE), ncol = 2)
+head(x)
+dCox <- CoxData(10^4, lambda = 3, rho = 2, x,
+                beta = c(2,2), cens.rate = 5)
+batch_id <- sample(1:90, size = 10^4, replace = TRUE)
+head(dCox)
+dCox_split <- split(dCox, batch_id)
+dCox_list<-list(dCox)
+head(batchCoxprepare(
+  formula = Surv(time, status) ~ x.1+x.2,
+  data = dCox #two disadvantages: 1.data are input together
+) )
+batchCoxbatch(
+  formula = Surv(time, status) ~ x.1+x.2,
+  beta = c(0,0),
+  learning.rate = 1,
+  data = dCox #two disadvantages: 1.data are input together
+)
+head(coxphSGDprepare(
+  formula = Surv(time, status) ~ x.1+x.2,
+  data = dCox #two disadvantages: 1.data are input together
+)   )
+coxphSGDbatch(
+  formula = Surv(time, status) ~ x.1+x.2,
+  beta = c(0,0),
+  learning.rate = 1,
+  data = dCox #two disadvantages: 1.data are input together
+)
+
+results <-
+  SGDCOX(formula     = Surv(time, status) ~ x.1+x.2,
+         data        = dCox_list,
+         epsilon     = 1e-5,
+         rate = function(x){1/(100*sqrt(x))},
+         initial   = c(0,0),
+         maxit    = 500)
+length(results$coefficients)
+results$coefficients[57]
+pre<-predict.sgdcox(results,dCox)
+head(dCox)
+dCox_list<-list(dCox)
+results <-
+  SGDCOX(formula     = Surv(time, status) ~ x.1+x.2,
+         data        = dCox_list,
+         epsilon     = 1e-5,
+         rate = function(x){1/(100*sqrt(x))},
+         initial   = c(0,0),
+         maxit    = 900)
+length(results$coefficients)
+results$coefficients[57]
+#install.packages("glmnet")
+require(glmnet)
+require(survival)
+attach(dCox)
+fit<-glmnet(cbind(x.1,x.2),Surv(time,status),family="cox")
+preg<-predict(fit,newx=cbind(x.1,x.2))
+detach(dCox)
+fit$beta
+require(microbenchmark)
+microbenchmark(SGDCOX(formula     = Surv(time, status) ~ x.1+x.2,
+                      data        = dCox_list,
+                      epsilon     = 1e-5,
+                      rate = function(x){1/(100*sqrt(x))},
+                      initial   = c(0,0),
+                      maxit    = 500),glmnet(cbind(x.1,x.2),Surv(time,status),family="cox"))

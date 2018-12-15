@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1544837095256.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2777268669",
+    "id" : "9166B08E",
+    "lastKnownWriteTime" : 1544846282,
+    "last_content_update" : 1544846282380,
+    "path" : "~/GitHub/615final/finalTest2.R",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "82,0",
+        "scrollLine" : "66"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

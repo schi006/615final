@@ -1,0 +1,88 @@
+require(survival)
+set.seed(456)
+x <- matrix(sample(0:1, size = 20000, replace = TRUE), ncol = 2)
+head(x)
+dCox <- CoxData(10^4, lambda = 3, rho = 2, x,
+                beta = c(2,2), cens.rate = 5)
+dCox_list <- list(dCox)
+beta.our<-NULL
+time.our<-proc.time()-proc.time()
+beta.coxph<-NULL
+time.coxph<-time.our
+beta.glmnet<-NULL
+time.glmnet<-time.our
+attach(dCox)
+for (i in 1:100){
+  ptm1=proc.time()
+  results <-
+    batchCox(formula     = Surv(time, status) ~ x.1+x.2,
+         data        = dCox_list,
+         epsilon     = 1e-5,
+         rate = function(x){1/(100*sqrt(x))},
+         initial   = c(0,0),
+         maxit    = 300)
+  time.our<-time.our+proc.time()-ptm1
+  beta.our<-cbind(beta.our,results$coefficients[[length(results$coefficients)]])
+  ptm2=proc.time()
+  results <-
+    coxphSGD(formula     = Surv(time, status) ~ x.1+x.2,
+              data        = dCox_list,
+              epsilon     = 1e-5,
+              learn.rates = function(x){1/(100*sqrt(x))},
+              beta.zero   = c(0,0),
+              max.iter    = 300)
+  time.coxph<-time.coxph+proc.time()-ptm2
+  beta.coxph<-cbind(beta.coxph,results$coefficients[[length(results$coefficients)]])
+  ptm3=proc.time()
+  fit <-
+    glmnet(cbind(x.1,x.2),Surv(time,status),family="cox")
+  time.glmnet<-time.glmnet+proc.time()-ptm3
+  beta.glmnet<-cbind(beta.glmnet,fit$beta[,dim(fit$beta)[2]])
+
+}
+detach(dCox)
+#time
+time.our
+time.coxph
+time.glmnet
+#coefficients
+rowMeans(beta.our)
+rowMeans(beta.coxph)
+rowMeans(beta.glmnet)
+
+set.seed(2134)
+batch_id <- sample(1:90, size = 10^5, replace = TRUE)
+dCox_split <- split(dCox, batch_id)
+beta2.our<-NULL
+time2.our<-proc.time()-proc.time()
+beta2.coxph<-NULL
+time2.coxph<-time2.our
+for (i in 1:100){
+  ptm4=proc.time()
+  results <-
+    batchCox(formula     = Surv(time, status) ~ x.1+x.2,
+             data        = dCox_split,
+             epsilon     = 1e-5,
+             rate = function(x){1/(100*sqrt(x))},
+             initial   = c(0,0),
+             maxit    = 300)
+  time2.our<-time2.our+proc.time()-ptm4
+  beta2.our<-cbind(beta2.our,results$coefficients[[length(results$coefficients)]])
+  ptm5=proc.time()
+  results <-
+    coxphSGD(formula     = Surv(time, status) ~ x.1+x.2,
+             data        = dCox_split,
+             epsilon     = 1e-5,
+             learn.rates = function(x){1/(100*sqrt(x))},
+             beta.zero   = c(0,0),
+             max.iter    = 300)
+  time2.coxph<-time2.coxph+proc.time()-ptm5
+  beta2.coxph<-cbind(beta2.coxph,results$coefficients[[length(results$coefficients)]])
+
+}
+#time
+time2.our
+time2.coxph
+#coefficients
+rowMeans(beta2.our)
+rowMeans(beta2.coxph)

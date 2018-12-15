@@ -1,0 +1,52 @@
+#real data application
+#install.packages("archivist")
+require(archivist)
+testCox <- archivist::aread('MarcinKosinski/MasterThesis/3eebc99bd231b16a3ea4dbeec9ab5edb')
+trainCox<- archivist::aread('MarcinKosinski/MasterThesis/1a06bef4a60a237bb65ca3e2f3f23515')
+class(trainCox)
+length(trainCox)
+head(
+  trainCox[[1]][ # train data is a list of data frames that corresponds to batches
+    c(7, 10),    # pick few rows
+    c(210,302,356,898,911,1092:1093) # pick few columns, and survival outcomes
+    ]
+)
+formulaSGD <- archivist::aread('MarcinKosinski/MasterThesis/064277e1c2a1fbea36d7d0ac518b9c8d')
+# Surv(times, patient.vital_status ~ all posible genes
+# how many genes are there in the whole formula?
+length(
+  strsplit(
+    as.character(formulaSGD)[3],
+    split = "+",
+    fixed = T
+  )[[1]]
+)
+require(survival)
+#our result
+system.time(batchCox(
+  formula = formulaSGD,
+  data = trainCox,
+  rate = function(x){1/x},
+  maxit = 490*2 # 98*5 / 5 full epoches
+) -> model.our)
+length(model.our$coefficients)
+beta.our<-model.our$coefficients[[981]]
+head(beta.our)
+beta.our[head(order(-abs(beta.our)))]
+beta.our[head(order(-beta.our))]
+beta.our[c("EGFR","BRAF","FLRT2","ATP2B2","TP53")]
+beta.our(which)
+#coxphSGD
+require(coxphSGD)
+system.time(coxphSGD(
+  formula = formulaSGD,
+  data = trainCox,
+  learn.rates = function(x){1/x},
+  max.iter = 490 # 98*5 / 5 full epoches
+) -> model.coxph)
+length(model.coxph$coefficients)
+beta.coxph<-model.coxph$coefficients[[491]]
+head(beta.coxph)
+beta.coxph[head(order(-abs(beta.our)))]
+beta.coxph[head(order(-abs(beta.coxph)))]
+beta.coxph[c("EGFR","BRAF","FLRT2","ATP2B2","TP53")]
